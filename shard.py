@@ -3,6 +3,9 @@ import gurobipy as gp
 from gurobipy import GRB
 from ogb.linkproppred import PygLinkPropPredDataset
 import math
+import matplotlib.pyplot as plt
+import time
+from tqdm import tqdm
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -47,17 +50,31 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
     capVec = np.full(g, c, dtype=int)
     assignments = np.zeros(n, dtype=int)
 
-    for start in range(0, n, batch_size):
+    solver_times = []
+
+    for start in tqdm(range(0, n, batch_size)):
         end = min(start + batch_size, n)
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
 
         model, S = get_sharad_model(batch_size, g, capVec, subA)
+        start_time = time.time()
         model.optimize()
+        end_time = time.time()
+        solver_times.append(end_time - start_time)
         nzs = np.nonzero(S.X)
         assignments[perm[nzs[0]]] = nzs[1]
 
-    return assignments
+    with open("random_cluster_runtime.txt", "w") as f:
+        f.write("\n".join(list(map(lambda x: str(x), solver_times))))
+
+    plt.xlabel("Batch Iteration")
+    plt.ylabel("Solver Runtime")
+    plt.title("Solver Runtime with Random Cluter Assignment")
+    plt.plot(range(len(solver_times)), solver_times)
+    plt.savefig("random_cluster.png")
+
+    np.save("random_cluster", assignments)
 
 
 A, n = get_graph()
@@ -68,4 +85,4 @@ g = 128
 c = math.ceil(A.sum() / g)
 batch_size = 128
 
-ass = rand_cluster(n, g, c, A, batch_size)
+rand_cluster(n, g, c, A, batch_size)
