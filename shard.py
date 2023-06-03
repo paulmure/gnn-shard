@@ -60,7 +60,7 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
 
-        model, S = get_sharad_model(end-start, g, capVec, subA)
+        model, S = get_sharad_model(end - start, g, capVec, subA)
         start_time = time.time()
         model.optimize()
         end_time = time.time()
@@ -80,12 +80,17 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
     np.save(os.path.join(CWD, "assignment"), assignments)
 
 
-A, n = get_graph()
-num_edges = A.sum()
-print(f"{n} nodes with {A.sum()} edges, density = {(num_edges/(n*n))*100:.2f}%")
+def main():
+    A, n = get_graph()
+    num_edges = A.sum()
+    print(f"{n} nodes with {A.sum()} edges, density = {(num_edges/(n*n))*100:.2f}%")
 
-g = 128
-c = math.ceil(A.sum() / g)
-batch_size = 128
+    g = 128
+    c = math.ceil(n / g)
+    batch_size = 128
 
-rand_cluster(n, g, c, A, batch_size)
+    rand_cluster(n, g, c, A, batch_size)
+
+
+if __name__ == "__main__":
+    main()
