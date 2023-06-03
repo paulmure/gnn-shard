@@ -2,8 +2,10 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 from ogb.linkproppred import PygLinkPropPredDataset
+import math
 
 
+# Returns -> (Adjacency matrix, number of nodes)
 def get_graph():
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root="dataset/")
     edge_list = dataset.get_edge_split()["train"]["edge"]
@@ -17,9 +19,10 @@ def get_graph():
 
 
 # n -> number of nodes in graph
-# g -> number of GPUs/PMUs
-# c -> number nodes that can fit in a single GPU/PMU
-def get_sharad_model(n: int, g: int, c: int, A: np.ndarray):
+# g -> number of gpus
+# capVec -> number of node that can fit in each gpu
+# A -> Adjacency matrix
+def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
     m = gp.Model("shard")
     m.Params.Threads = 16
 
@@ -28,7 +31,6 @@ def get_sharad_model(n: int, g: int, c: int, A: np.ndarray):
 
     onesG = np.ones(g, dtype=int)
     onesN = np.ones(n, dtype=int)
-    capVec = np.full(g, c, dtype=int)
 
     m.addConstr((S @ onesG) == onesN, name="one-to-one")
     m.addConstr((onesN @ S) <= capVec, name="capacity")
@@ -40,11 +42,30 @@ def get_sharad_model(n: int, g: int, c: int, A: np.ndarray):
     return m, S
 
 
+def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+    perm = np.random.permutation(np.array(range(n)))
+    capVec = np.full(g, c, dtype=int)
+    assignments = np.zeros(n, dtype=int)
+
+    for start in range(0, n, batch_size):
+        end = min(start + batch_size, n)
+        batch = perm[start:end]
+        subA = A[np.ix_(batch, batch)]
+
+        model, S = get_sharad_model(batch_size, g, capVec, subA)
+        model.optimize()
+        nzs = np.nonzero(S.X)
+        assignments[perm[nzs[0]]] = nzs[1]
+
+    return assignments
+
+
 A, n = get_graph()
+num_edges = A.sum()
+print(f"{n} nodes with {A.sum()} edges, density = {(num_edges/(n*n))*100:.2f}%")
 
-g = 2
-c = 1
+g = 128
+c = math.ceil(A.sum() / g)
+batch_size = 128
 
-model, S = get_sharad_model(n, g, c, A)
-model.optimize()
-print(S.X)
+ass = rand_cluster(n, g, c, A, batch_size)
