@@ -6,6 +6,9 @@ import math
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
+import os
+
+CWD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "random_cluster")
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -52,7 +55,7 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
 
     solver_times = []
 
-    for start in tqdm(range(0, n, batch_size)):
+    for start in tqdm(range(0, batch_size, batch_size)):
         end = min(start + batch_size, n)
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
@@ -65,16 +68,16 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
         nzs = np.nonzero(S.X)
         assignments[perm[nzs[0]]] = nzs[1]
 
-    with open("random_cluster/runtime.txt", "w") as f:
+    with open(os.path.join(CWD, "runtime.txt"), "w") as f:
         f.write("\n".join(list(map(lambda x: str(x), solver_times))))
 
     plt.xlabel("Batch Iteration")
     plt.ylabel("Solver Runtime")
     plt.title("Solver Runtime with Random Cluter Assignment")
     plt.plot(range(len(solver_times)), solver_times)
-    plt.savefig("random_cluster/runtime.png")
+    plt.savefig(os.path.join(CWD, "runtime.png"))
 
-    np.save("random_cluster/assignment", assignments)
+    np.save(os.path.join(CWD, "assignment"), assignments)
 
 
 A, n = get_graph()
