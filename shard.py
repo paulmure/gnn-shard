@@ -60,7 +60,7 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
 
-        model, S = get_sharad_model(batch_size, g, capVec, subA)
+        model, S = get_sharad_model(end-start, g, capVec, subA)
         start_time = time.time()
         model.optimize()
         end_time = time.time()
