@@ -52,7 +52,7 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
 
     solver_times = []
 
-    for start in tqdm(range(0, batch_size, batch_size)):
+    for start in tqdm(range(0, n, batch_size)):
         end = min(start + batch_size, n)
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
