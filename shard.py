@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 import gurobipy as gp
 from gurobipy import GRB
 from ogb.linkproppred import PygLinkPropPredDataset
@@ -84,13 +85,15 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
 
 
 def main():
+    batch_size = int(sys.argv[1])
     A, n = get_graph()
     num_edges = A.sum()
     print(f"{n} nodes with {A.sum()} edges, density = {(num_edges/(n*n))*100:.2f}%")
 
     g = 128
     c = math.ceil(n / g)
-    batch_size = 128
+
+    print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
     rand_cluster(n, g, c, A, batch_size)
 
