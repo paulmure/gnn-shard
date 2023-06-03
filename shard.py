@@ -69,7 +69,7 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
         nzs = np.nonzero(S.X)
         assignments[perm[nzs[0]]] = nzs[1]
 
-        ids, counts = np.unique(nzs[1])
+        ids, counts = np.unique(nzs[1], return_counts=True)
         capVec[ids] -= counts
 
     with open(os.path.join(CWD, "runtime.txt"), "w") as f:
