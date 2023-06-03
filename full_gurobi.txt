@@ -1,0 +1,56 @@
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2384054
+Academic license - for non-commercial use only - registered to paulmure@stanford.edu
+Set parameter Threads to value 16
+/home/paul/code_repos/gnn-shard/shard.py:37: RuntimeWarning: Chained matrix multiplications of MVars is inefficient, collect numeric terms first when building expressions
+  objective = sum(((S @ S[i]) @ A[:, i]) for i in range(n))
+Gurobi Optimizer version 10.0.1 build v10.0.1rc0 (linux64)
+
+CPU model: AMD Ryzen 7 3700X 8-Core Processor, instruction set [SSE2|AVX|AVX2]
+Thread count: 8 physical cores, 16 logical processors, using up to 16 threads
+
+Academic license - for non-commercial use only - registered to paulmure@stanford.edu
+Optimize a model with 4269 rows, 8534 columns and 17068 nonzeros
+Model fingerprint: 0x1df36d68
+Model has 2135822 quadratic objective terms
+Variable types: 0 continuous, 8534 integer (8534 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [0e+00, 0e+00]
+  QObjective range [4e+00, 4e+00]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 1e+00]
+Presolve removed 0 rows and 0 columns (presolve time = 46s) ...
+Presolve time: 46.36s
+Presolved: 4269 rows, 8534 columns, 17068 nonzeros
+Presolved model has 2144356 quadratic objective terms
+Variable types: 0 continuous, 8534 integer (8534 binary)
+
+Root simplex log...
+
+Iteration    Objective       Primal Inf.    Dual Inf.      Time
+       0   -0.0000000e+00   0.000000e+00   8.274308e+04     47s
+
+Root relaxation: infeasible, 17 iterations, 0.09 seconds (0.01 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0 infeasible    0               - infeasible      -     -   46s
+
+Explored 1 nodes (17 simplex iterations) in 46.59 seconds (22.48 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 0
+No other solutions better than -1e+100
+
+Model is infeasible
+Best objective -, best bound -, gap -
+Traceback (most recent call last):
+  File "/home/paul/code_repos/gnn-shard/shard.py", line 49, in <module>
+    print(S.X)
+  File "src/gurobipy/mvar.pxi", line 296, in gurobipy.MVar.__getattr__
+  File "src/gurobipy/mvar.pxi", line 557, in gurobipy.MVar.getAttr
+  File "src/gurobipy/attrutil.pxi", line 148, in gurobipy.__gettypedattrlist
+gurobipy.GurobiError: Unable to retrieve attribute 'X'

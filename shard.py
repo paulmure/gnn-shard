@@ -5,8 +5,8 @@ from ogb.linkproppred import PygLinkPropPredDataset
 
 
 def get_graph():
-    dataset = PygLinkPropPredDataset(name='ogbl-ddi', root='dataset/')
-    edge_list = dataset.get_edge_split()['train']['edge']
+    dataset = PygLinkPropPredDataset(name="ogbl-ddi", root="dataset/")
+    edge_list = dataset.get_edge_split()["train"]["edge"]
     num_nodes = edge_list.flatten().max() + 1
     A = np.zeros((num_nodes, num_nodes), dtype=int)
     edge_list_T = np.transpose(edge_list)
@@ -20,7 +20,7 @@ def get_graph():
 # g -> number of GPUs/PMUs
 # c -> number nodes that can fit in a single GPU/PMU
 def get_sharad_model(n: int, g: int, c: int, A: np.ndarray):
-    m = gp.Model('shard')
+    m = gp.Model("shard")
     m.Params.Threads = 16
 
     # S -> GPU/node assignment matrix
@@ -38,6 +38,7 @@ def get_sharad_model(n: int, g: int, c: int, A: np.ndarray):
     m.setObjective(objective, GRB.MAXIMIZE)
 
     return m, S
+
 
 A, n = get_graph()
 
