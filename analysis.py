@@ -144,6 +144,7 @@ def main():
         os.path.join(RAND_SHARD, "32_batch_no_limit", "assignment.npy")
     )
     batch_64_4min = np.load(os.path.join(RAND_SHARD, "64_batch_4min", "assignment.npy"))
+    batch_1_4min = np.load(os.path.join(RAND_SHARD, "1_batch_4min", "assignment.npy"))
 
     bfs = bfs_method(n, c, A)
     dfs = dfs_method(n, c, A)
@@ -160,6 +161,7 @@ def main():
         (batch_32_nolimit, "Batch size 32 with no time limit"),
         (batch_32_4min, "Batch size 32 with 4 min limit"),
         (batch_64_4min, "Batch size 64 with 4 min limit"),
+        (batch_1_4min, "Batch size 1 with 4 min limit"),
         (bfs, "BFS"),
         (dfs, "DFS"),
         (kmeans, "kMeans"),
