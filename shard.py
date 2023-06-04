@@ -8,8 +8,11 @@ import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
 import os
+from sklearn.cluster import KMeans
 
-CWD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "random_cluster")
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+RAND_CLUSTER = os.path.join(ROOT_DIR, "random_cluster")
+KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -49,8 +52,9 @@ def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
     return m, S
 
 
-def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
-    perm = np.random.permutation(np.array(range(n)))
+def rand_cluster(
+    n, g: int, c: int, A: np.ndarray, batch_size: int, perm: np.ndarray, path
+):
     capVec = np.full(g, c, dtype=int)
     assignments = np.zeros(n, dtype=int)
 
@@ -72,30 +76,41 @@ def rand_cluster(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
         ids, counts = np.unique(nzs[1], return_counts=True)
         capVec[ids] -= counts
 
-    with open(os.path.join(CWD, "runtime.txt"), "w") as f:
+    with open(os.path.join(path, "runtime.txt"), "w") as f:
         f.write("\n".join(list(map(lambda x: str(x), solver_times))))
 
     plt.xlabel("Batch Iteration")
     plt.ylabel("Solver Runtime")
-    plt.title("Solver Runtime with Random Cluter Assignment")
+    plt.title("Solver Runtime")
     plt.plot(range(len(solver_times)), solver_times)
-    plt.savefig(os.path.join(CWD, "runtime.png"))
+    plt.savefig(os.path.join(path, "runtime.png"))
 
-    np.save(os.path.join(CWD, "assignment"), assignments)
+    np.save(os.path.join(path, "assignment"), assignments)
+
+
+def kmeans_cluster_method(n, g: int, c: int, A: np.ndarray, batch_size: int):
+    n_clusters = math.ceil(n / batch_size)
+    kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init="auto")
+    idxs = kmeans.fit_predict(A)
+    sorted_tups = sorted(zip(range(n), idxs), key=lambda x: x[1])
+    perm = np.array(list(map(lambda x: x[0], sorted_tups)))
+    rand_cluster(n, g, c, A, batch_size, perm, KMEANS_CLUSTER)
 
 
 def main():
     batch_size = int(sys.argv[1])
     A, n = get_graph()
     num_edges = A.sum()
-    print(f"{n} nodes with {A.sum()} edges, density = {(num_edges/(n*n))*100:.2f}%")
+    density = (num_edges / (n * n)) * 100
+    print(f"{n} nodes with {A.sum()} edges, density = {density:.2f}%")
 
     g = 128
     c = math.ceil(n / g)
 
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
-    rand_cluster(n, g, c, A, batch_size)
+    # perm = np.random.permutation(np.array(range(n)))
+    kmeans_cluster_method(n, g, c, A, batch_size)
 
 
 if __name__ == "__main__":
