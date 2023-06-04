@@ -119,17 +119,47 @@ def greedy_heuristic(n: int, g: int, c: int, A: np.ndarray) -> np.ndarray:
     return assignments
 
 
-def eval_assignment(baseline: int, A: np.ndarray, assignment: np.ndarray, name: str):
+def validate_assignment(n: int, g: int, c: int, assignment: np.ndarray, name: str):
+    if assignment.shape[0] != n:
+        raise Exception(f"{name} did not have the right number of node")
+
+    mem_banks, counts = np.unique(assignment, return_counts=True)
+    if np.max(mem_banks) >= g or np.min(mem_banks) < 0:
+        raise Exception(f"{name} used a memory bank index that is not allowed")
+    if np.max(counts) > c:
+        raise Exception(f"{name} put too many nodes in a single bank")
+
+
+def eval_assignment(
+    n: int,
+    g: int,
+    c: int,
+    baseline: int,
+    A: np.ndarray,
+    assignment: np.ndarray,
+    name: str,
+):
+    validate_assignment(n, g, c, assignment, name)
     traffic = calculate_traffic(assignment, A)
     improvement = baseline / traffic
     print(f"{name}: traffic = {traffic}, {improvement:.2f} times over baseline")
 
 
 def eval_all(
-    random: np.ndarray, assignments: list[tuple[np.ndarray, str]], A: np.ndarray
+    n: int,
+    g: int,
+    c: int,
+    random: np.ndarray,
+    assignments: list[tuple[np.ndarray, str]],
+    A: np.ndarray,
 ):
     baseline = calculate_traffic(random, A)
-    list(map(lambda ass: eval_assignment(baseline, A, ass[0], ass[1]), assignments))
+    list(
+        map(
+            lambda ass: eval_assignment(n, g, c, baseline, A, ass[0], ass[1]),
+            assignments,
+        )
+    )
 
 
 def main():
@@ -171,7 +201,7 @@ def main():
         (bfs_cluster, "BFS with 32 batch size solver"),
     ]
 
-    eval_all(random_split, assignments, A)
+    eval_all(n, g, c, random_split, assignments, A)
 
 
 if __name__ == "__main__":
