@@ -8,7 +8,8 @@ import queue
 from shard import BFS_WALK, get_graph, find_unassigned_neighbors
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAND_SHARD = os.path.join(ROOT_DIR, "random_cluster")
+RAND_SHARD_OPT = os.path.join(ROOT_DIR, "random_cluster", "optimal")
+RAND_SHARD_4MIN = os.path.join(ROOT_DIR, "random_cluster", "4min")
 KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
 BFS_CLUSTER = os.path.join(ROOT_DIR, "bfs_walk")
 
@@ -80,7 +81,8 @@ def dfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
     return assignment
 
 
-rand_cluster = np.load(os.path.join(RAND_SHARD, "assignment.npy"))
+rand_cluster_opt = np.load(os.path.join(RAND_SHARD_OPT, "assignment.npy"))
+rand_cluster_4min = np.load(os.path.join(RAND_SHARD_4MIN, "assignment.npy"))
 bfs_cluster = np.load(os.path.join(BFS_WALK, "assignment.npy"))
 # kmeans_cluster = np.load(os.path.join(KMEANS_CLUSTER, "assignment.npy"))
 A, n = get_graph()
@@ -91,7 +93,8 @@ bfs = bfs_method(n, c, A)
 dfs = dfs_method(n, c, A)
 kmeans = kmeans_method(g, A)
 
-rand_cluster_traffic = eval_traffic(rand_cluster, A)
+rand_cluster_opt_traffic = eval_traffic(rand_cluster_opt, A)
+rand_cluster_4min_traffic = eval_traffic(rand_cluster_4min, A)
 rand_split_traffic = eval_traffic(random_split, A)
 kmeans_traffic = eval_traffic(kmeans, A)
 # kmeans_cluster_traffic = eval_traffic(kmeans_cluster, A)
@@ -101,14 +104,16 @@ bfs_cluster_traffic = eval_traffic(bfs_cluster, A)
 
 print("Network traffic:")
 print(f"\t random split {rand_split_traffic}")
-print(f"\t random cluster with solver {rand_cluster_traffic}")
+print(f"\t random cluster with solver {rand_cluster_opt_traffic}")
+print(f"\t random cluster with solver (4 mins max) {rand_cluster_4min_traffic}")
 print(f"\t kmeans split {kmeans_traffic}")
 # print(f"\tkmeans cluster split {kmeans_cluster_traffic}")
 print(f"\t BFS split {bfs_traffic}")
 print(f"\t DFS split {dfs_traffic}")
 print(f"\t BFS cluster {bfs_cluster}")
 
-random_cluster_improvement = rand_split_traffic / rand_cluster_traffic
+random_cluster_improvement = rand_split_traffic / rand_cluster_opt_traffic
+random_cluster_4min_improvement = rand_split_traffic / rand_cluster_4min_traffic
 kmeans_improvement = rand_split_traffic / kmeans_traffic
 # kmeans_cluster_improvement = rand_split_traffic / kmeans_cluster_traffic
 bfs_improvement = rand_split_traffic / bfs_traffic
@@ -116,6 +121,7 @@ dfs_improvement = rand_split_traffic / dfs_traffic
 bfs_cluster_improvement = rand_split_traffic / bfs_cluster_traffic
 
 print(f"random cluster improvement: {random_cluster_improvement}")
+print(f"random cluster improvement (4 min max): {random_cluster_4min_improvement}")
 print(f"kmeans improvement: {kmeans_improvement}")
 # print(f"kmeans cluster improvement: {kmeans_cluster_improvement}")
 print(f"BFS improvement: {bfs_improvement}")

@@ -12,7 +12,8 @@ import os
 from sklearn.cluster import KMeans
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAND_CLUSTER = os.path.join(ROOT_DIR, "random_cluster")
+RAND_CLUSTER_OPT = os.path.join(ROOT_DIR, "random_cluster", "optimal")
+RAND_CLUSTER_4MIN = os.path.join(ROOT_DIR, "random_cluster", "4min")
 KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
 BFS_WALK = os.path.join(ROOT_DIR, "bfs_walk")
 
@@ -153,9 +154,10 @@ def main():
 
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
-    # perm = np.random.permutation(np.array(range(n)))
+    perm = np.random.permutation(np.array(range(n)))
+    rand_cluster(n, g, c, A, batch_size, perm, RAND_CLUSTER_4MIN)
     # kmeans_cluster_method(n, g, c, A, batch_size)
-    random_walk_bfs(n, g, c, A, batch_size)
+    # random_walk_bfs(n, g, c, A, batch_size)
 
 
 if __name__ == "__main__":
