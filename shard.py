@@ -16,7 +16,7 @@ KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
 
 
 # Returns -> (Adjacency matrix, number of nodes)
-def get_graph():
+def get_graph() -> tuple[np.ndarray, int]:
     dataset = PygLinkPropPredDataset(name="ogbl-ddi", root="dataset/")
     edge_list = dataset.get_edge_split()["train"]["edge"]
     num_nodes = edge_list.flatten().max() + 1
@@ -25,7 +25,7 @@ def get_graph():
     # make the graph undirected
     A[edge_list_T[0], edge_list_T[1]] = 1
     A[edge_list_T[1], edge_list_T[0]] = 1
-    return A, num_nodes
+    return A, num_nodes.item()
 
 
 # n -> number of nodes in graph
@@ -53,7 +53,7 @@ def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
 
 
 def rand_cluster(
-    n, g: int, c: int, A: np.ndarray, batch_size: int, perm: np.ndarray, path
+    n: int, g: int, c: int, A: np.ndarray, batch_size: int, perm: np.ndarray, path
 ):
     capVec = np.full(g, c, dtype=int)
     assignments = np.zeros(n, dtype=int)
@@ -88,13 +88,53 @@ def rand_cluster(
     np.save(os.path.join(path, "assignment"), assignments)
 
 
-def kmeans_cluster_method(n, g: int, c: int, A: np.ndarray, batch_size: int):
+def kmeans_cluster_method(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
     n_clusters = math.ceil(n / batch_size)
     kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init="auto")
     idxs = kmeans.fit_predict(A)
     sorted_tups = sorted(zip(range(n), idxs), key=lambda x: x[1])
     perm = np.array(list(map(lambda x: x[0], sorted_tups)))
     rand_cluster(n, g, c, A, batch_size, perm, KMEANS_CLUSTER)
+
+
+def find_unassigned_neighbors(
+    node: int, unassigned: np.ndarray, A: np.ndarray
+) -> np.ndarray:
+    neighbors = np.nonzero(A[node])[0]
+    available = np.nonzero(unassigned[neighbors])[0]
+    res = neighbors[available]
+    return res
+
+
+def random_walk(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+    perm = np.zeros(n, dtype=int)
+    unassigned = np.ones(n, dtype=int)
+    perm_idx = 0
+    ctr = 0
+    for node in range(n):
+        if unassigned[node] == 0:
+            continue
+
+        ctr += 1
+        perm[perm_idx] = node
+        unassigned[perm_idx] = 0
+        perm_idx += 1
+
+        unass_neighbors = find_unassigned_neighbors(node, unassigned, A)
+        ctr += unass_neighbors.shape[0]
+        end = perm_idx + unass_neighbors.shape[0]
+        perm[perm_idx:end] = unass_neighbors
+        perm_idx = end
+
+        unassigned[unass_neighbors] = np.zeros_like(unass_neighbors, dtype=int)
+
+    print(ctr)
+    print(A.shape)
+    print(perm_idx, np.sum(unassigned))
+    print(np.nonzero(1 - unassigned))
+    print(perm)
+    perm_sort = np.sort(np.unique(perm))
+    print(perm_sort, perm_sort.shape)
 
 
 def main():
@@ -110,7 +150,8 @@ def main():
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
     # perm = np.random.permutation(np.array(range(n)))
-    kmeans_cluster_method(n, g, c, A, batch_size)
+    # kmeans_cluster_method(n, g, c, A, batch_size)
+    random_walk(n, g, c, A, batch_size)
 
 
 if __name__ == "__main__":
