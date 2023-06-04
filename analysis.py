@@ -3,8 +3,9 @@ import os
 import math
 from sklearn.cluster import KMeans
 from tqdm import tqdm
+import queue
 
-from shard import get_graph
+from shard import get_graph, find_unassigned_neighbors
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RAND_SHARD = os.path.join(ROOT_DIR, "random_cluster")
@@ -35,26 +36,18 @@ def kmeans_method(g: int, A: np.ndarray) -> np.ndarray:
     return kmeans.fit_predict(A)
 
 
-def find_unassigned_neighbors(
-    node: int, unassigned: np.ndarray, A: np.ndarray
+def graph_traversal_method(
+    n: int, c: int, A: np.ndarray, frontier: queue.Queue | queue.LifoQueue
 ) -> np.ndarray:
-    neighbors = np.nonzero(A[node])[0]
-    available = np.nonzero(unassigned[neighbors])[0]
-    res = neighbors[available]
-    return res
-
-
-def bfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
     assignment = np.zeros(n, dtype=int)
-    frontier = [0]
     unassigned = np.ones(n, dtype=int)
     g_idx = 0
     curr_cap = 0
     assigned = 0
+    frontier.put(0)
     with tqdm(total=n) as pbar:
         while assigned < n:
-            node = frontier[0]
-            frontier = frontier[1:]
+            node = frontier.get()
 
             assignment[node] = g_idx
             assigned += 1
@@ -67,8 +60,22 @@ def bfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
                 curr_cap = 0
 
             for neighbor in find_unassigned_neighbors(node, unassigned, A):
-                frontier.append(neighbor)
+                frontier.put(neighbor)
 
+    return assignment
+
+
+def bfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
+    print("Doing BFS...")
+    frontier = queue.Queue()
+    assignment = graph_traversal_method(n, c, A, frontier)
+    return assignment
+
+
+def dfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
+    print("Doing DFS...")
+    frontier = queue.LifoQueue()
+    assignment = graph_traversal_method(n, c, A, frontier)
     return assignment
 
 
@@ -79,6 +86,7 @@ g = 128
 c = math.ceil(n / g)
 random_split = random_split_traffic(n, g, c)
 bfs = bfs_method(n, c, A)
+dfs = dfs_method(n, c, A)
 kmeans = kmeans_method(g, A)
 
 rand_cluster_traffic = eval_traffic(rand_cluster, A)
@@ -86,6 +94,7 @@ rand_split_traffic = eval_traffic(random_split, A)
 kmeans_traffic = eval_traffic(kmeans, A)
 # kmeans_cluster_traffic = eval_traffic(kmeans_cluster, A)
 bfs_traffic = eval_traffic(bfs, A)
+dfs_traffic = eval_traffic(dfs, A)
 
 print("Network traffic:")
 print(f"\t random split {rand_split_traffic}")
@@ -93,13 +102,16 @@ print(f"\t random cluster with solver {rand_cluster_traffic}")
 print(f"\t kmeans split {kmeans_traffic}")
 # print(f"\tkmeans cluster split {kmeans_cluster_traffic}")
 print(f"\t BFS split {bfs_traffic}")
+print(f"\t DFS split {dfs_traffic}")
 
 random_cluster_improvement = rand_split_traffic / rand_cluster_traffic
 kmeans_improvement = rand_split_traffic / kmeans_traffic
 # kmeans_cluster_improvement = rand_split_traffic / kmeans_cluster_traffic
 bfs_improvement = rand_split_traffic / bfs_traffic
+dfs_improvement = rand_split_traffic / dfs_traffic
 
 print(f"random cluster improvement: {random_cluster_improvement}")
 print(f"kmeans improvement: {kmeans_improvement}")
 # print(f"kmeans cluster improvement: {kmeans_cluster_improvement}")
 print(f"BFS improvement: {bfs_improvement}")
+print(f"DFS improvement: {dfs_improvement}")

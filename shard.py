@@ -1,4 +1,5 @@
 import numpy as np
+import queue
 import sys
 import gurobipy as gp
 from gurobipy import GRB
@@ -13,6 +14,7 @@ from sklearn.cluster import KMeans
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RAND_CLUSTER = os.path.join(ROOT_DIR, "random_cluster")
 KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
+BFS_WALK = os.path.join(ROOT_DIR, "bfs_walk")
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -55,6 +57,9 @@ def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
 def rand_cluster(
     n: int, g: int, c: int, A: np.ndarray, batch_size: int, perm: np.ndarray, path
 ):
+    if not os.path.exists(path):
+        raise Exception("given path does not exists")
+
     capVec = np.full(g, c, dtype=int)
     assignments = np.zeros(n, dtype=int)
 
@@ -106,35 +111,31 @@ def find_unassigned_neighbors(
     return res
 
 
-def random_walk(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+def graph_traversal_permutation(
+    n: int, A: np.ndarray, frontier: queue.Queue | queue.LifoQueue
+) -> np.ndarray:
     perm = np.zeros(n, dtype=int)
     unassigned = np.ones(n, dtype=int)
-    perm_idx = 0
-    ctr = 0
-    for node in range(n):
-        if unassigned[node] == 0:
-            continue
+    assigned = 0
+    frontier.put(0)
+    with tqdm(total=n) as pbar:
+        while assigned < n:
+            node = frontier.get()
+            perm[assigned] = node
+            assigned += 1
+            pbar.update(1)
+            unassigned[node] = 0
 
-        ctr += 1
-        perm[perm_idx] = node
-        unassigned[perm_idx] = 0
-        perm_idx += 1
+            for neighbor in find_unassigned_neighbors(node, unassigned, A):
+                frontier.put(neighbor)
 
-        unass_neighbors = find_unassigned_neighbors(node, unassigned, A)
-        ctr += unass_neighbors.shape[0]
-        end = perm_idx + unass_neighbors.shape[0]
-        perm[perm_idx:end] = unass_neighbors
-        perm_idx = end
+    return perm
 
-        unassigned[unass_neighbors] = np.zeros_like(unass_neighbors, dtype=int)
 
-    print(ctr)
-    print(A.shape)
-    print(perm_idx, np.sum(unassigned))
-    print(np.nonzero(1 - unassigned))
-    print(perm)
-    perm_sort = np.sort(np.unique(perm))
-    print(perm_sort, perm_sort.shape)
+def random_walk_bfs(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+    frontier = queue.Queue()
+    perm = graph_traversal_permutation(n, A, frontier)
+    rand_cluster(n, g, c, A, batch_size, perm, BFS_WALK)
 
 
 def main():
@@ -151,7 +152,7 @@ def main():
 
     # perm = np.random.permutation(np.array(range(n)))
     # kmeans_cluster_method(n, g, c, A, batch_size)
-    random_walk(n, g, c, A, batch_size)
+    random_walk_bfs(n, g, c, A, batch_size)
 
 
 if __name__ == "__main__":
