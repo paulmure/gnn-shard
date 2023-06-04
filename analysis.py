@@ -5,11 +5,12 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 import queue
 
-from shard import get_graph, find_unassigned_neighbors
+from shard import BFS_WALK, get_graph, find_unassigned_neighbors
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RAND_SHARD = os.path.join(ROOT_DIR, "random_cluster")
 KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
+BFS_CLUSTER = os.path.join(ROOT_DIR, "bfs_walk")
 
 
 def eval_traffic(assignments: np.ndarray, A: np.ndarray) -> int:
@@ -80,6 +81,7 @@ def dfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
 
 
 rand_cluster = np.load(os.path.join(RAND_SHARD, "assignment.npy"))
+bfs_cluster = np.load(os.path.join(BFS_WALK, "assignment.npy"))
 # kmeans_cluster = np.load(os.path.join(KMEANS_CLUSTER, "assignment.npy"))
 A, n = get_graph()
 g = 128
@@ -95,6 +97,7 @@ kmeans_traffic = eval_traffic(kmeans, A)
 # kmeans_cluster_traffic = eval_traffic(kmeans_cluster, A)
 bfs_traffic = eval_traffic(bfs, A)
 dfs_traffic = eval_traffic(dfs, A)
+bfs_cluster_traffic = eval_traffic(bfs_cluster, A)
 
 print("Network traffic:")
 print(f"\t random split {rand_split_traffic}")
@@ -103,15 +106,18 @@ print(f"\t kmeans split {kmeans_traffic}")
 # print(f"\tkmeans cluster split {kmeans_cluster_traffic}")
 print(f"\t BFS split {bfs_traffic}")
 print(f"\t DFS split {dfs_traffic}")
+print(f"\t BFS cluster {bfs_cluster}")
 
 random_cluster_improvement = rand_split_traffic / rand_cluster_traffic
 kmeans_improvement = rand_split_traffic / kmeans_traffic
 # kmeans_cluster_improvement = rand_split_traffic / kmeans_cluster_traffic
 bfs_improvement = rand_split_traffic / bfs_traffic
 dfs_improvement = rand_split_traffic / dfs_traffic
+bfs_cluster_improvement = rand_split_traffic / bfs_cluster_traffic
 
 print(f"random cluster improvement: {random_cluster_improvement}")
 print(f"kmeans improvement: {kmeans_improvement}")
 # print(f"kmeans cluster improvement: {kmeans_cluster_improvement}")
 print(f"BFS improvement: {bfs_improvement}")
 print(f"DFS improvement: {dfs_improvement}")
+print(f"BFS cluster improvement: {bfs_cluster_improvement}")

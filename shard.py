@@ -16,6 +16,8 @@ RAND_CLUSTER = os.path.join(ROOT_DIR, "random_cluster")
 KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
 BFS_WALK = os.path.join(ROOT_DIR, "bfs_walk")
 
+TIMEOUT = 60 * 4
+
 
 # Returns -> (Adjacency matrix, number of nodes)
 def get_graph() -> tuple[np.ndarray, int]:
@@ -37,6 +39,7 @@ def get_graph() -> tuple[np.ndarray, int]:
 def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
     m = gp.Model("shard")
     m.Params.Threads = 16
+    m.Params.TimeLimit = TIMEOUT
 
     # S -> GPU/node assignment matrix
     S = m.addMVar(shape=(n, g), vtype=GRB.BINARY, name="S")
