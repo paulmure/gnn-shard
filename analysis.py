@@ -3,9 +3,10 @@ import os
 import math
 from tqdm import tqdm
 import queue
+import time
+from sklearn.cluster import KMeans
 
 from shard import get_graph, find_unassigned_neighbors
-from greedy import greedy1, greedy2
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 RAND_SHARD = os.path.join(ROOT_DIR, "random_cluster")
@@ -74,6 +75,23 @@ def dfs_method(n: int, c: int, A: np.ndarray) -> np.ndarray:
     frontier = queue.LifoQueue()
     assignment = graph_traversal_method(n, c, A, frontier)
     return assignment
+
+
+def kmeans_method(n: int, g: int, c: int, A: np.ndarray) -> np.ndarray:
+    prediction = KMeans(n_clusters=g, n_init="auto").fit_predict(A)
+    pred_idx = zip(prediction, range(n))
+
+    sorted_pred_idx = sorted(pred_idx, key=lambda x: x[0])
+    perm = np.array(list(map(lambda x: x[1], sorted_pred_idx)))
+
+    assignments = -np.ones(n, dtype=int)
+    g_idx = 0
+    for start in range(0, n, c):
+        end = min(start + c, n)
+        assignments[perm[start:end]] = g_idx
+        g_idx += 1
+
+    return assignments
 
 
 def greedy_assign_node(
@@ -159,6 +177,8 @@ def eval_all(
 
 
 def main():
+    np.random.seed(int(time.time()))
+
     A, n = get_graph()
     g = 128
     c = math.ceil(n / g)
@@ -169,6 +189,8 @@ def main():
 
     for dir in os.listdir(RAND_SHARD):
         path = os.path.join(RAND_SHARD, dir, "assignment.npy")
+        if not os.path.exists(path):
+            continue
         assignment = np.load(path)
         assignments.append((assignment, dir))
 
@@ -176,15 +198,14 @@ def main():
     dfs = dfs_method(n, c, A)
 
     greedy = greedy_heuristic(n, g, c, A)
-    greedy1_ass = greedy1(n, g, c, A)
-    greedy2_ass = greedy2(n, g, c, A)
+
+    kmeans = kmeans_method(n, g, c, A)
 
     assignments = assignments + [
         (bfs, "BFS"),
         (dfs, "DFS"),
         (greedy, "Greedy"),
-        (greedy1_ass, "Greedy 1"),
-        (greedy2_ass, "Greedy 2"),
+        (kmeans, "KMeans"),
     ]
 
     eval_all(n, g, c, random_split, assignments, A)
