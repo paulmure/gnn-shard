@@ -1,0 +1,6 @@
+4267 nodes with 2135822 edges, density = 11.73%
+g = 128, c = 34, batch_size = 32
+Set parameter WLSAccessID
+Set parameter WLSSecret
+Set parameter LicenseID to value 2384054
+Academic license - for non-commercial use only - registered to paulmure@stanford.edu
