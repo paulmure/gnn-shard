@@ -20,7 +20,7 @@ def calculate_traffic(assignments: np.ndarray, A: np.ndarray) -> int:
     return np.sum(left != right)
 
 
-def random_split_traffic(n: int, g: int, c: int) -> np.ndarray:
+def random_split_assignment(n: int, g: int, c: int) -> np.ndarray:
     perm = np.random.permutation(range(n))
     assignments = np.zeros(n, dtype=int)
     g_idx = 0
@@ -168,6 +168,8 @@ def eval_all(
     A: np.ndarray,
 ):
     baseline = calculate_traffic(random, A)
+    print(f"baseline traffic: {baseline}")
+
     list(
         map(
             lambda ass: eval_assignment(n, g, c, baseline, A, ass[0], ass[1]),
@@ -183,7 +185,7 @@ def main():
     g = 128
     c = math.ceil(n / g)
 
-    random_split = random_split_traffic(n, g, c)
+    random_split = random_split_assignment(n, g, c)
 
     assignments = []
 
