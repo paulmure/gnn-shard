@@ -13,7 +13,7 @@ from sklearn.cluster import KMeans
 
 # ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-TIMEOUT = 60 * 4
+TIMEOUT = 10
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -134,10 +134,13 @@ def graph_traversal_permutation(
     return perm
 
 
-# def random_walk_bfs(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
-#     frontier = queue.Queue()
-#     perm = graph_traversal_permutation(n, A, frontier)
-#     rand_cluster(n, g, c, A, batch_size, perm, BFS_WALK)
+def kmeans_perm(n: int, g: int, A: np.ndarray) -> np.ndarray:
+    prediction = KMeans(n_clusters=g, n_init="auto").fit_predict(A)
+    pred_idx = zip(prediction, range(n))
+
+    sorted_pred_idx = sorted(pred_idx, key=lambda x: x[0])
+    perm = np.array(list(map(lambda x: x[1], sorted_pred_idx)))
+    return perm
 
 
 def main():
@@ -154,7 +157,7 @@ def main():
 
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
-    perm = np.random.permutation(np.array(range(n)))
+    perm = kmeans_perm(n, g, A)
     rand_cluster(n, g, c, A, batch_size, perm, path)
     # kmeans_cluster_method(n, g, c, A, batch_size)
     # random_walk_bfs(n, g, c, A, batch_size)
