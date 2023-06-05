@@ -11,10 +11,7 @@ from tqdm import tqdm
 import os
 from sklearn.cluster import KMeans
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAND_CLUSTER = os.path.join(ROOT_DIR, "random_cluster", "1_batch_4min")
-KMEANS_CLUSTER = os.path.join(ROOT_DIR, "kmeans_cluster")
-BFS_WALK = os.path.join(ROOT_DIR, "bfs_walk")
+# ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TIMEOUT = 60 * 4
 
@@ -36,8 +33,9 @@ def get_graph() -> tuple[np.ndarray, int]:
 # g -> number of gpus
 # capVec -> number of node that can fit in each gpu
 # A -> Adjacency matrix
-def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
+def get_sharad_model(n: int, g: int, cap_remaining: np.ndarray, A: np.ndarray):
     m = gp.Model("shard")
+    m.Params.OutputFlag = 0
     m.Params.Threads = 16
     m.Params.TimeLimit = TIMEOUT
 
@@ -48,7 +46,7 @@ def get_sharad_model(n: int, g: int, capVec: np.ndarray, A: np.ndarray):
     onesN = np.ones(n, dtype=int)
 
     m.addConstr((S @ onesG) == onesN, name="one-to-one")
-    m.addConstr((onesN @ S) <= capVec, name="capacity")
+    m.addConstr((onesN @ S) <= cap_remaining, name="capacity")
 
     # Maximize locality
     objective = sum(((S @ S[i]) @ A[:, i]) for i in range(n))
@@ -63,8 +61,8 @@ def rand_cluster(
     if not os.path.exists(path):
         raise Exception("given path does not exists")
 
-    capVec = np.full(g, c, dtype=int)
-    assignments = np.zeros(n, dtype=int)
+    cap_remaining = np.full(g, c, dtype=int)
+    assignments = -np.ones(n, dtype=int)
 
     solver_times = []
 
@@ -73,16 +71,17 @@ def rand_cluster(
         batch = perm[start:end]
         subA = A[np.ix_(batch, batch)]
 
-        model, S = get_sharad_model(end - start, g, capVec, subA)
+        model, S = get_sharad_model(end - start, g, cap_remaining, subA)
         start_time = time.time()
         model.optimize()
         end_time = time.time()
         solver_times.append(end_time - start_time)
-        nzs = np.nonzero(S.X)
-        assignments[perm[nzs[0]]] = nzs[1]
 
-        ids, counts = np.unique(nzs[1], return_counts=True)
-        capVec[ids] -= counts
+        (subA_node_ids, mem_asses) = np.nonzero(S.X)
+        assignments[perm[batch[subA_node_ids]]] = mem_asses
+
+        mem_ids, counts = np.unique(mem_asses, return_counts=True)
+        cap_remaining[mem_ids] -= counts
 
     with open(os.path.join(path, "runtime.txt"), "w") as f:
         f.write("\n".join(list(map(lambda x: str(x), solver_times))))
@@ -96,13 +95,13 @@ def rand_cluster(
     np.save(os.path.join(path, "assignment"), assignments)
 
 
-def kmeans_cluster_method(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
-    n_clusters = math.ceil(n / batch_size)
-    kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init="auto")
-    idxs = kmeans.fit_predict(A)
-    sorted_tups = sorted(zip(range(n), idxs), key=lambda x: x[1])
-    perm = np.array(list(map(lambda x: x[0], sorted_tups)))
-    rand_cluster(n, g, c, A, batch_size, perm, KMEANS_CLUSTER)
+# def kmeans_cluster_method(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+#     n_clusters = math.ceil(n / batch_size)
+#     kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init="auto")
+#     idxs = kmeans.fit_predict(A)
+#     sorted_tups = sorted(zip(range(n), idxs), key=lambda x: x[1])
+#     perm = np.array(list(map(lambda x: x[0], sorted_tups)))
+#     rand_cluster(n, g, c, A, batch_size, perm, KMEANS_CLUSTER)
 
 
 def find_unassigned_neighbors(
@@ -135,14 +134,16 @@ def graph_traversal_permutation(
     return perm
 
 
-def random_walk_bfs(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
-    frontier = queue.Queue()
-    perm = graph_traversal_permutation(n, A, frontier)
-    rand_cluster(n, g, c, A, batch_size, perm, BFS_WALK)
+# def random_walk_bfs(n: int, g: int, c: int, A: np.ndarray, batch_size: int):
+#     frontier = queue.Queue()
+#     perm = graph_traversal_permutation(n, A, frontier)
+#     rand_cluster(n, g, c, A, batch_size, perm, BFS_WALK)
 
 
 def main():
     batch_size = int(sys.argv[1])
+    path = sys.argv[2]
+
     A, n = get_graph()
     num_edges = A.sum()
     density = (num_edges / (n * n)) * 100
@@ -154,7 +155,7 @@ def main():
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")
 
     perm = np.random.permutation(np.array(range(n)))
-    rand_cluster(n, g, c, A, batch_size, perm, RAND_CLUSTER)
+    rand_cluster(n, g, c, A, batch_size, perm, path)
     # kmeans_cluster_method(n, g, c, A, batch_size)
     # random_walk_bfs(n, g, c, A, batch_size)
 

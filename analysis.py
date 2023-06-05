@@ -1,11 +1,10 @@
 import numpy as np
 import os
 import math
-from sklearn.cluster import KMeans
 from tqdm import tqdm
 import queue
 
-from shard import BFS_WALK, get_graph, find_unassigned_neighbors
+from shard import get_graph, find_unassigned_neighbors
 from greedy import greedy1, greedy2
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,11 +31,6 @@ def random_split_traffic(n: int, g: int, c: int) -> np.ndarray:
     return assignments
 
 
-def kmeans_method(g: int, A: np.ndarray) -> np.ndarray:
-    kmeans = KMeans(n_clusters=g, random_state=0, n_init="auto")
-    return kmeans.fit_predict(A)
-
-
 def graph_traversal_method(
     n: int, c: int, A: np.ndarray, frontier: queue.Queue | queue.LifoQueue
 ) -> np.ndarray:
@@ -49,6 +43,8 @@ def graph_traversal_method(
     with tqdm(total=n) as pbar:
         while assigned < n:
             node = frontier.get()
+            if not unassigned[node]:
+                continue
 
             assignment[node] = g_idx
             assigned += 1
@@ -169,36 +165,26 @@ def main():
 
     random_split = random_split_traffic(n, g, c)
 
-    batch_32_4min = np.load(os.path.join(RAND_SHARD, "32_batch_4min", "assignment.npy"))
-    batch_32_nolimit = np.load(
-        os.path.join(RAND_SHARD, "32_batch_no_limit", "assignment.npy")
-    )
-    batch_64_4min = np.load(os.path.join(RAND_SHARD, "64_batch_4min", "assignment.npy"))
-    batch_1_4min = np.load(os.path.join(RAND_SHARD, "1_batch_4min", "assignment.npy"))
+    assignments = []
+
+    for dir in os.listdir(RAND_SHARD):
+        path = os.path.join(RAND_SHARD, dir, "assignment.npy")
+        assignment = np.load(path)
+        assignments.append((assignment, dir))
 
     bfs = bfs_method(n, c, A)
     dfs = dfs_method(n, c, A)
-
-    kmeans = kmeans_method(g, A)
 
     greedy = greedy_heuristic(n, g, c, A)
     greedy1_ass = greedy1(n, g, c, A)
     greedy2_ass = greedy2(n, g, c, A)
 
-    bfs_cluster = np.load(os.path.join(BFS_WALK, "assignment.npy"))
-
-    assignments = [
-        (batch_32_nolimit, "Batch size 32 with no time limit"),
-        (batch_32_4min, "Batch size 32 with 4 min limit"),
-        (batch_64_4min, "Batch size 64 with 4 min limit"),
-        (batch_1_4min, "Batch size 1 with 4 min limit"),
+    assignments = assignments + [
         (bfs, "BFS"),
         (dfs, "DFS"),
-        (kmeans, "kMeans"),
         (greedy, "Greedy"),
         (greedy1_ass, "Greedy 1"),
         (greedy2_ass, "Greedy 2"),
-        (bfs_cluster, "BFS with 32 batch size solver"),
     ]
 
     eval_all(n, g, c, random_split, assignments, A)
