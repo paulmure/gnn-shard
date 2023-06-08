@@ -13,7 +13,7 @@ from sklearn.cluster import KMeans
 
 # ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-TIMEOUT = 10
+TIMEOUT = 60 * 6
 
 
 # Returns -> (Adjacency matrix, number of nodes)
@@ -26,7 +26,9 @@ def get_graph() -> tuple[np.ndarray, int]:
     # make the graph undirected
     A[edge_list_T[0], edge_list_T[1]] = 1
     A[edge_list_T[1], edge_list_T[0]] = 1
-    return A, num_nodes.item()
+    # return A, num_nodes.item()
+    n = 128
+    return A[:n, :n], n
 
 
 # n -> number of nodes in graph
@@ -35,12 +37,16 @@ def get_graph() -> tuple[np.ndarray, int]:
 # A -> Adjacency matrix
 def get_sharad_model(n: int, g: int, cap_remaining: np.ndarray, A: np.ndarray):
     m = gp.Model("shard")
-    m.Params.OutputFlag = 0
+    # m.Params.OutputFlag = 0
+    # m.Params.MIPGap = 0.08
     m.Params.Threads = 16
     m.Params.TimeLimit = TIMEOUT
 
+    edges = np.nonzero(A)
+
     # S -> GPU/node assignment matrix
     S = m.addMVar(shape=(n, g), vtype=GRB.BINARY, name="S")
+    # S = m.addMVar(shape=(n,), vtype=GRB.INTEGER, lb=0, ub=n - 1, name="S")
 
     onesG = np.ones(g, dtype=int)
     onesN = np.ones(n, dtype=int)
@@ -49,8 +55,23 @@ def get_sharad_model(n: int, g: int, cap_remaining: np.ndarray, A: np.ndarray):
     m.addConstr((onesN @ S) <= cap_remaining, name="capacity")
 
     # Maximize locality
-    objective = sum(((S @ S[i]) @ A[:, i]) for i in range(n))
-    m.setObjective(objective, GRB.MAXIMIZE)
+    # objective = ((S @ S.T) * A).sum()
+
+    # Minimize traffic
+    traffics = []
+    for i in range(edges[0].shape[0]):
+        a, b = edges[0][i], edges[1][i]
+
+        aux = m.addVars(g, vtype=GRB.INTEGER)
+        for j in range(g):
+            aux2 = m.addVar(lb=-1, ub=1)
+            m.addConstr(aux2 == (S[a, j] - S[b, j]))
+            m.addConstr(aux[j] == gp.abs_(aux2))
+        traffics.append(gp.quicksum(aux))
+
+    objective = gp.quicksum(traffics)
+
+    m.setObjective(objective, GRB.MINIMIZE)
 
     return m, S
 
@@ -144,7 +165,7 @@ def kmeans_perm(n: int, g: int, A: np.ndarray) -> np.ndarray:
 
 
 def main():
-    batch_size = int(sys.argv[1])
+    # batch_size = int(sys.argv[1])
     path = sys.argv[2]
 
     A, n = get_graph()
@@ -152,7 +173,8 @@ def main():
     density = (num_edges / (n * n)) * 100
     print(f"{n} nodes with {A.sum()} edges, density = {density:.2f}%")
 
-    g = 128
+    batch_size = n
+    g = 4
     c = math.ceil(n / g)
 
     print(f"g = {g}, c = {c}, batch_size = {batch_size}")

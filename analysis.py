@@ -43,6 +43,10 @@ def graph_traversal_method(
     frontier.put(0)
     with tqdm(total=n) as pbar:
         while assigned < n:
+            if frontier.empty():
+                next_unassigned = np.nonzero(unassigned)[0][0]
+                frontier.put(next_unassigned)
+
             node = frontier.get()
             if not unassigned[node]:
                 continue
@@ -182,15 +186,16 @@ def main():
     np.random.seed(int(time.time()))
 
     A, n = get_graph()
-    g = 128
+    g = 4
     c = math.ceil(n / g)
 
     random_split = random_split_assignment(n, g, c)
 
     assignments = []
 
-    for dir in os.listdir(RAND_SHARD):
-        path = os.path.join(RAND_SHARD, dir, "assignment.npy")
+    for dir in ["128_global"]:  # os.listdir(RAND_SHARD):
+        # path = os.path.join(RAND_SHARD, dir, "assignment.npy")
+        path = os.path.join(ROOT_DIR, dir, "assignment.npy")
         if not os.path.exists(path):
             continue
         assignment = np.load(path)
